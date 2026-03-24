@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && python -m pytest tests/test_schemas.py -v 2>&1)",
+      "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && python -m pytest tests/test_analysts.py tests/test_researcher.py tests/test_trader.py -v 2>&1)",
+      "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && pip install yfinance finnhub-python praw pandas-ta langchain-anthropic langgraph python-dotenv -q 2>&1 | tail -5)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest tests/test_backtest.py -v 2>&1)",
+      "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && python -m pytest tests/ -v 2>&1)",
+      "Bash(ls -la /Users/guhyeongyu/Desktop/trading-agents/.env* 2>&1)",
+      "Bash(python main.py --mode single --ticker AAPL --date 2024-01-15 2>&1)",
+      "Bash(grep -n \"json.loads\" /Users/guhyeongyu/Desktop/trading-agents/agents/*.py)",
+      "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && python main.py --mode single --ticker AAPL --date 2024-01-15 2>&1)"
+    ]
+  }
+}
