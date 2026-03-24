@@ -72,7 +72,7 @@ class ResearchReport(BaseModel):
     consensus: str = Field(
         ...,
         description="합의 결론",
-        pattern="^(buy|sell|hold)$"
+        pattern="^(buy|sell|hold|short|cover)$"
     )
     conviction: float = Field(..., ge=0.0, le=1.0, description="확신도 0.0~1.0")
     created_at: str = Field(
@@ -94,7 +94,7 @@ class TradeDecision(BaseModel):
     action: str = Field(
         ...,
         description="거래 액션",
-        pattern="^(buy|sell|hold)$"
+        pattern="^(buy|sell|hold|short|cover)$"
     )
     quantity: float = Field(..., ge=0.0, le=1.0, description="포지션 비중 0.0~1.0")
     reasoning: str = Field(..., description="결정 근거")

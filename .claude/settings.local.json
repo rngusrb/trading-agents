@@ -10,7 +10,13 @@
       "Bash(ls -la /Users/guhyeongyu/Desktop/trading-agents/.env* 2>&1)",
       "Bash(python main.py --mode single --ticker AAPL --date 2024-01-15 2>&1)",
       "Bash(grep -n \"json.loads\" /Users/guhyeongyu/Desktop/trading-agents/agents/*.py)",
-      "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && python main.py --mode single --ticker AAPL --date 2024-01-15 2>&1)"
+      "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && python main.py --mode single --ticker AAPL --date 2024-01-15 2>&1)",
+      "Bash(python -c \"\nfrom agents.news_analyst import analyze_news\nfrom agents.technical_analyst import analyze_technical\nfrom agents.sentiment_analyst import analyze_sentiment\n\nprint\\('=== NEWS ANALYST ==='\\)\nr = analyze_news\\('AAPL', '2024-01-15'\\)\nprint\\(f'signal={r.signal} confidence={r.confidence} summary={r.summary[:80]}'\\)\n\nprint\\(\\)\nprint\\('=== TECHNICAL ANALYST ==='\\)\nr2 = analyze_technical\\('AAPL', '2024-01-15'\\)\nprint\\(f'signal={r2.signal} confidence={r2.confidence} summary={r2.summary[:80]}'\\)\n\nprint\\(\\)\nprint\\('=== SENTIMENT ANALYST ==='\\)\nr3 = analyze_sentiment\\('AAPL', '2024-01-15'\\)\nprint\\(f'signal={r3.signal} confidence={r3.confidence} summary={r3.summary[:80]}'\\)\n\" 2>&1)",
+      "Bash(python -m pytest tests/ -v 2>&1 | tail -20)",
+      "Bash(python -m pytest tests/ -v 2>&1 | tail -15)",
+      "Bash(python -c \"from cli.main import parse_args, print_header; print\\('CLI import OK'\\)\" 2>&1)",
+      "Bash(python -c \"from reports.generator import generate_report; print\\('Reports import OK'\\)\" 2>&1)",
+      "Bash(python -c \"\nfrom config import get_config\nfrom cli.main import parse_args\nfrom reports.generator import generate_report\nfrom tools.alpha_vantage import fetch_company_overview\nfrom tools.social_data import fetch_stocktwits_posts\nprint\\('All imports OK'\\)\n\" 2>&1)"
     ]
   }
 }

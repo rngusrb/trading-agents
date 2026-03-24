@@ -39,14 +39,18 @@ class TradingAgentState(TypedDict):
     # 다음 실행할 에이전트
     next_agent: str
 
+    # 시스템 설정 (config/__init__.py)
+    config: Optional[dict]
 
-def create_initial_state(ticker: str, date: str) -> TradingAgentState:
+
+def create_initial_state(ticker: str, date: str, config: dict = None) -> TradingAgentState:
     """
     초기 상태 생성
 
     Args:
         ticker: 종목 코드 (예: "AAPL")
         date: 분석 날짜 (예: "2024-01-15")
+        config: 시스템 설정 (선택)
 
     Returns:
         TradingAgentState: 초기화된 상태
@@ -59,5 +63,6 @@ def create_initial_state(ticker: str, date: str) -> TradingAgentState:
         research_report=None,
         trade_decision=None,
         messages=[],
-        next_agent="fundamentals_analyst"
+        next_agent="fundamentals_analyst",
+        config=config
     )

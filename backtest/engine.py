@@ -26,21 +26,25 @@ class BacktestEngine:
     def __init__(
         self,
         initial_capital: float = 100_000.0,
-        commission_rate: float = 0.001
+        commission_rate: float = 0.001,
+        config: dict = None
     ):
         """
         Args:
             initial_capital: 초기 투자 자본 (달러)
             commission_rate: 거래 수수료율 (0.1%)
+            config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
         """
         self.initial_capital = initial_capital
         self.commission_rate = commission_rate
+        self.config = config
         self.reset()
 
     def reset(self):
         """상태 초기화"""
         self.cash = self.initial_capital
-        self.holdings: dict[str, float] = {}  # ticker -> shares
+        self.holdings: dict[str, float] = {}  # ticker -> shares (long)
+        self.short_positions: dict[str, float] = {}  # ticker -> shares (short)
         self.trades: list[dict] = []
         self.portfolio_values: list[dict] = []
 
@@ -82,7 +86,7 @@ class BacktestEngine:
 
             try:
                 # 파이프라인 실행
-                final_state = run_pipeline(ticker, date_str)
+                final_state = run_pipeline(ticker, date_str, config=self.config)
                 decision = final_state.get('trade_decision')
 
                 if decision:
@@ -159,6 +163,38 @@ class BacktestEngine:
                 'value': round(sell_amount, 2)
             })
 
+        elif action == 'short' and quantity_ratio > 0:
+            # 숏 포지션: 주식을 빌려서 매도
+            short_value = self.cash * quantity_ratio
+            shares = short_value / price
+            self.short_positions[ticker] = self.short_positions.get(ticker, 0) + shares
+            self.cash += short_value * (1 - self.commission_rate)
+            self.trades.append({
+                'date': date_str,
+                'action': 'short',
+                'ticker': ticker,
+                'shares': round(shares, 4),
+                'price': price,
+                'value': round(short_value, 2)
+            })
+
+        elif action == 'cover' and ticker in self.short_positions:
+            # 숏 커버: 빌린 주식 상환
+            shares_to_cover = self.short_positions[ticker] * quantity_ratio
+            cost = shares_to_cover * price * (1 + self.commission_rate)
+            self.cash -= cost
+            self.short_positions[ticker] -= shares_to_cover
+            if self.short_positions[ticker] < 0.001:
+                del self.short_positions[ticker]
+            self.trades.append({
+                'date': date_str,
+                'action': 'cover',
+                'ticker': ticker,
+                'shares': round(shares_to_cover, 4),
+                'price': price,
+                'value': round(cost, 2)
+            })
+
     def _get_price_on_date(self, df: pd.DataFrame, date_str: str) -> Optional[float]:
         """특정 날짜 종가 조회"""
         try:
@@ -185,18 +221,23 @@ class BacktestEngine:
         holdings_value = 0.0
         if price and ticker in self.holdings:
             holdings_value = self.holdings[ticker] * price
-        total_value = self.cash + holdings_value
+        # 숏 포지션은 부채 (현재가격 * 보유수량)
+        short_liability = 0.0
+        if price and ticker in self.short_positions:
+            short_liability = self.short_positions[ticker] * price
+        total_value = self.cash + holdings_value - short_liability
         self.portfolio_values.append({
             'date': date_str,
             'cash': round(self.cash, 2),
             'holdings_value': round(holdings_value, 2),
+            'short_liability': round(short_liability, 2),
             'total_value': round(total_value, 2)
         })
 
     def _liquidate_all(self, ticker: str, price_df: pd.DataFrame, end_date: str):
         """종료 시 모든 포지션 청산"""
+        price = self._get_price_on_date(price_df, end_date)
         if ticker in self.holdings and self.holdings[ticker] > 0:
-            price = self._get_price_on_date(price_df, end_date)
             if price:
                 sell_amount = self.holdings[ticker] * price * (1 - self.commission_rate)
                 self.cash += sell_amount
@@ -209,6 +250,20 @@ class BacktestEngine:
                     'value': round(sell_amount, 2)
                 })
                 del self.holdings[ticker]
+        # 숏 포지션 청산 (커버)
+        if ticker in self.short_positions and self.short_positions[ticker] > 0:
+            if price:
+                cover_cost = self.short_positions[ticker] * price * (1 + self.commission_rate)
+                self.cash -= cover_cost
+                self.trades.append({
+                    'date': end_date,
+                    'action': 'cover (liquidate)',
+                    'ticker': ticker,
+                    'shares': round(self.short_positions[ticker], 4),
+                    'price': price,
+                    'value': round(cover_cost, 2)
+                })
+                del self.short_positions[ticker]
 
     def _compile_results(
         self,

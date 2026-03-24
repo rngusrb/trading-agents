@@ -44,7 +44,8 @@ def fundamentals_node(state: TradingAgentState) -> dict:
     report = analyze_fundamentals(
         state['ticker'],
         state['date'],
-        state.get('market_data')
+        state.get('market_data'),
+        state.get('config')
     )
     existing = list(state.get('analyst_reports', []))
     existing.append(report)
@@ -53,7 +54,7 @@ def fundamentals_node(state: TradingAgentState) -> dict:
 
 def sentiment_node(state: TradingAgentState) -> dict:
     """소셜 미디어 감성 분석 노드"""
-    report = analyze_sentiment(state['ticker'], state['date'])
+    report = analyze_sentiment(state['ticker'], state['date'], state.get('config'))
     existing = list(state.get('analyst_reports', []))
     existing.append(report)
     return {"analyst_reports": existing}
@@ -61,7 +62,7 @@ def sentiment_node(state: TradingAgentState) -> dict:
 
 def news_node(state: TradingAgentState) -> dict:
     """뉴스 분석 노드"""
-    report = analyze_news(state['ticker'], state['date'])
+    report = analyze_news(state['ticker'], state['date'], state.get('config'))
     existing = list(state.get('analyst_reports', []))
     existing.append(report)
     return {"analyst_reports": existing}
@@ -72,7 +73,8 @@ def technical_node(state: TradingAgentState) -> dict:
     report = analyze_technical(
         state['ticker'],
         state['date'],
-        state.get('market_data')
+        state.get('market_data'),
+        state.get('config')
     )
     existing = list(state.get('analyst_reports', []))
     existing.append(report)
@@ -84,7 +86,8 @@ def researcher_node(state: TradingAgentState) -> dict:
     research_report = conduct_research(
         state['ticker'],
         state['date'],
-        state['analyst_reports']
+        state['analyst_reports'],
+        state.get('config')
     )
     return {"research_report": research_report}
 
@@ -96,7 +99,8 @@ def trader_node(state: TradingAgentState) -> dict:
         state['date'],
         state['research_report'],
         state['analyst_reports'],
-        state.get('market_data')
+        state.get('market_data'),
+        state.get('config')
     )
     return {"trade_decision": trade_decision}
 
@@ -107,7 +111,8 @@ def risk_manager_node(state: TradingAgentState) -> dict:
         state['trade_decision'],
         state['research_report'],
         state['analyst_reports'],
-        state.get('market_data')
+        state.get('market_data'),
+        state.get('config')
     )
     return {"trade_decision": final_decision}
 
@@ -147,18 +152,21 @@ def build_workflow() -> Any:
     return graph.compile()
 
 
-def run_pipeline(ticker: str, date: str) -> TradingAgentState:
+def run_pipeline(ticker: str, date: str, config: dict = None) -> TradingAgentState:
     """
     트레이딩 파이프라인 실행
 
     Args:
         ticker: 종목 코드 (예: "AAPL")
         date: 분석 날짜 (예: "2024-01-15")
+        config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
 
     Returns:
         TradingAgentState: 최종 상태 (trade_decision 포함)
     """
+    from config import get_config
+    cfg = get_config(config)
     workflow = build_workflow()
-    initial_state = create_initial_state(ticker, date)
+    initial_state = create_initial_state(ticker, date, config=cfg)
     final_state = workflow.invoke(initial_state)
     return final_state

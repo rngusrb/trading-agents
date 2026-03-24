@@ -21,7 +21,8 @@ def make_trade_decision(
     date: str,
     research_report: ResearchReport,
     analyst_reports: list[AnalystReport],
-    market_data: Optional[MarketData] = None
+    market_data: Optional[MarketData] = None,
+    config: dict = None
 ) -> TradeDecision:
     """
     최종 트레이딩 결정 수행
@@ -32,10 +33,15 @@ def make_trade_decision(
         research_report: Bull/Bear 리서치 보고서
         analyst_reports: 4개 애널리스트 보고서
         market_data: 현재 주가 데이터
+        config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
 
     Returns:
         TradeDecision: 트레이딩 결정 (approved=False, Risk Manager 승인 대기)
     """
+    from config import get_config
+    cfg = get_config(config)
+    model = cfg.get("decision_llm", DECISION_MODEL)
+
     context = _build_trader_context(ticker, date, research_report, analyst_reports, market_data)
 
     client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
@@ -46,7 +52,7 @@ def make_trade_decision(
 Based on all available information, make a specific trading decision.
 
 Rules:
-- action: "buy" if overall outlook is positive, "sell" if negative, "hold" if uncertain
+- action: "buy" if bullish, "sell" if you hold and want to exit, "short" if bearish with no position, "cover" if you're short and want to exit, "hold" if uncertain
 - quantity: position size as fraction 0.0-1.0 (e.g., 0.5 = 50% of available capital)
   - Strong conviction (>0.75): quantity 0.6-0.8
   - Moderate conviction (0.5-0.75): quantity 0.3-0.5
@@ -56,7 +62,7 @@ Rules:
 
 Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation before or after.
 {{
-    "action": "buy|sell|hold",
+    "action": "buy|sell|short|cover|hold",
     "quantity": 0.0-1.0,
     "reasoning": "detailed reasoning for the decision",
     "risk_score": 0.0-1.0
@@ -64,7 +70,7 @@ Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation
 
     try:
         message = client.messages.create(
-            model=DECISION_MODEL,
+            model=model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )

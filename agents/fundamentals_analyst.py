@@ -26,7 +26,8 @@ ANALYST_MODEL = os.getenv('ANALYST_MODEL', 'claude-haiku-4-5-20251001')
 def analyze_fundamentals(
     ticker: str,
     date: str,
-    market_data: Optional[MarketData] = None
+    market_data: Optional[MarketData] = None,
+    config: dict = None
 ) -> AnalystReport:
     """
     펀더멘털 분석 실행
@@ -35,10 +36,15 @@ def analyze_fundamentals(
         ticker: 종목 코드
         date: 분석 날짜 YYYY-MM-DD
         market_data: 주가 데이터 (선택)
+        config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
 
     Returns:
         AnalystReport: 펀더멘털 분석 보고서
     """
+    from config import get_config
+    cfg = get_config(config)
+    model = cfg.get("quick_think_llm", ANALYST_MODEL)
+
     # 데이터 수집
     profile = fetch_company_profile(ticker)
     financials = fetch_basic_financials(ticker)
@@ -67,7 +73,7 @@ Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation
 
     try:
         message = client.messages.create(
-            model=ANALYST_MODEL,
+            model=model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )

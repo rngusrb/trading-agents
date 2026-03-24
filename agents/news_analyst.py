@@ -16,17 +16,22 @@ load_dotenv()
 ANALYST_MODEL = os.getenv('ANALYST_MODEL', 'claude-haiku-4-5-20251001')
 
 
-def analyze_news(ticker: str, date: str) -> AnalystReport:
+def analyze_news(ticker: str, date: str, config: dict = None) -> AnalystReport:
     """
     뉴스 분석 실행
 
     Args:
         ticker: 종목 코드
         date: 분석 날짜 YYYY-MM-DD
+        config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
 
     Returns:
         AnalystReport: 뉴스 분석 보고서
     """
+    from config import get_config
+    cfg = get_config(config)
+    model = cfg.get("quick_think_llm", ANALYST_MODEL)
+
     raw_news = fetch_company_news(ticker, date, days_back=7)
     news_items = extract_news_summary(raw_news)
     context = _build_news_context(ticker, date, news_items)
@@ -46,13 +51,14 @@ Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation
 
     try:
         message = client.messages.create(
-            model=ANALYST_MODEL,
+            model=model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )
         result = parse_llm_json(message.content[0].text)
+        print(f"[NewsAnalyst] ✅ LLM OK — signal={result.get('signal')}, confidence={result.get('confidence')}")
     except Exception as e:
-        print(f"LLM news analysis error: {e}")
+        print(f"[NewsAnalyst] ❌ LLM error: {e} — fallback 사용")
         result = _fallback_news_analysis(news_items)
 
     return AnalystReport(

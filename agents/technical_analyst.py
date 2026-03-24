@@ -21,7 +21,8 @@ ANALYST_MODEL = os.getenv('ANALYST_MODEL', 'claude-haiku-4-5-20251001')
 def analyze_technical(
     ticker: str,
     date: str,
-    market_data: Optional[MarketData] = None
+    market_data: Optional[MarketData] = None,
+    config: dict = None
 ) -> AnalystReport:
     """
     기술적 분석 실행
@@ -30,10 +31,15 @@ def analyze_technical(
         ticker: 종목 코드
         date: 분석 날짜 YYYY-MM-DD
         market_data: 현재 주가 데이터 (선택)
+        config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
 
     Returns:
         AnalystReport: 기술적 분석 보고서
     """
+    from config import get_config
+    cfg = get_config(config)
+    model = cfg.get("quick_think_llm", ANALYST_MODEL)
+
     # 히스토리컬 데이터 수집 (60일)
     from datetime import datetime, timedelta
     target_dt = datetime.strptime(date, '%Y-%m-%d')
@@ -64,13 +70,14 @@ Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation
 
     try:
         message = client.messages.create(
-            model=ANALYST_MODEL,
+            model=model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )
         result = parse_llm_json(message.content[0].text)
+        print(f"[TechnicalAnalyst] ✅ LLM OK — signal={result.get('signal')}, confidence={result.get('confidence')}")
     except Exception as e:
-        print(f"LLM technical analysis error: {e}")
+        print(f"[TechnicalAnalyst] ❌ LLM error: {e} — fallback 사용")
         result = _fallback_technical_analysis(signals, indicators)
 
     # indicators를 market_data에 병합

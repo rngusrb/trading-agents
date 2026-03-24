@@ -47,7 +47,20 @@
 - **35/35 PASSED** (0.96s)
 - 파일: test_schemas, test_analysts, test_researcher, test_trader, test_backtest
 
+## Phase 8: 기능 확장 (2026-03-24)
+- ✅ 1. LLM JSON 파싱 수정 — 3개 에이전트 정상 작동 (news/technical/sentiment)
+- ✅ 2. 매일 분석 (interval=1, --interval CLI 옵션 추가)
+- ✅ 3. 숏 포지션 추가 (short/cover action, schemas + 백테스팅 엔진 반영)
+- ✅ 4. Config 구조 도입 (config/__init__.py, 모든 에이전트 config 파라미터 지원)
+- ✅ 5. CLI 인터페이스 (cli/main.py, --quick-think/--deep-think/--decision 옵션)
+- ✅ 6. HTML 리포트 생성 (reports/generator.py, single + backtest 모드)
+- ✅ 7. StockTwits API로 Reddit 대체 (tools/social_data.py, API 키 불필요)
+- ✅ 8. Alpha Vantage API 추가 (tools/alpha_vantage.py, .env.example 업데이트)
+- 결과: **35/35 테스트 통과**
+
 ## 주의사항
 - pandas-ta Python 3.10 미지원 → ta 라이브러리(0.11.0)로 대체
-- 실제 실행: .env에 API 키 설정 필요 (ANTHROPIC_API_KEY, FINNHUB_API_KEY, REDDIT_*)
+- 소셜 데이터: Reddit PRAW → StockTwits API (무료, API 키 불필요)
+- 실제 실행: .env에 API 키 설정 필요 (ANTHROPIC_API_KEY, FINNHUB_API_KEY)
 - 실행 명령: `python main.py --mode backtest` 또는 `python main.py --mode single`
+- CLI: `python cli/main.py --ticker AAPL --mode single`

@@ -14,7 +14,8 @@ def run_backtest(
     ticker: str = "AAPL",
     start_date: str = "2024-01-02",
     end_date: str = "2024-03-29",
-    initial_capital: float = 100_000.0
+    initial_capital: float = 100_000.0,
+    trading_days_interval: int = 1
 ):
     """
     백테스팅 실행
@@ -24,6 +25,7 @@ def run_backtest(
         start_date: 시작 날짜
         end_date: 종료 날짜
         initial_capital: 초기 자본
+        trading_days_interval: 거래 판단 주기 (영업일, 기본값: 1)
     """
     from backtest.engine import BacktestEngine
     from backtest.metrics import format_results_table
@@ -33,7 +35,7 @@ def run_backtest(
         ticker=ticker,
         start_date=start_date,
         end_date=end_date,
-        trading_days_interval=5  # 매주 금요일 분석
+        trading_days_interval=trading_days_interval
     )
 
     if results:
@@ -85,10 +87,11 @@ if __name__ == "__main__":
     parser.add_argument('--end', default='2024-03-29', help='종료 날짜 (백테스팅)')
     parser.add_argument('--date', default='2024-01-15', help='분석 날짜 (단일 모드)')
     parser.add_argument('--capital', type=float, default=100000.0, help='초기 자본')
+    parser.add_argument('--interval', type=int, default=1, help='거래 판단 주기 (영업일, 기본값: 1)')
 
     args = parser.parse_args()
 
     if args.mode == 'backtest':
-        run_backtest(args.ticker, args.start, args.end, args.capital)
+        run_backtest(args.ticker, args.start, args.end, args.capital, args.interval)
     else:
         run_single_analysis(args.ticker, args.date)

@@ -18,7 +18,8 @@ DECISION_MODEL = os.getenv('DECISION_MODEL', 'claude-sonnet-4-6')
 def conduct_research(
     ticker: str,
     date: str,
-    analyst_reports: list[AnalystReport]
+    analyst_reports: list[AnalystReport],
+    config: dict = None
 ) -> ResearchReport:
     """
     Bull/Bear 토론 기반 리서치 수행
@@ -27,22 +28,27 @@ def conduct_research(
         ticker: 종목 코드
         date: 분석 날짜 YYYY-MM-DD
         analyst_reports: 4개 애널리스트 보고서
+        config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
 
     Returns:
         ResearchReport: 매수/매도 논거 및 합의 보고서
     """
+    from config import get_config
+    cfg = get_config(config)
+    model = cfg.get("decision_llm", DECISION_MODEL)
+
     context = _build_research_context(ticker, date, analyst_reports)
 
     client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
     # Bull Researcher
-    bull_case = _get_bull_case(client, ticker, context)
+    bull_case = _get_bull_case(client, ticker, context, model)
 
     # Bear Researcher
-    bear_case = _get_bear_case(client, ticker, context)
+    bear_case = _get_bear_case(client, ticker, context, model)
 
     # 합의 도출
-    consensus_result = _get_consensus(client, ticker, bull_case, bear_case, context)
+    consensus_result = _get_consensus(client, ticker, bull_case, bear_case, context, model)
 
     return ResearchReport(
         ticker=ticker,
@@ -92,8 +98,9 @@ def _build_research_context(
     return "\n".join(lines)
 
 
-def _get_bull_case(client: anthropic.Anthropic, ticker: str, context: str) -> str:
+def _get_bull_case(client: anthropic.Anthropic, ticker: str, context: str, model: str = None) -> str:
     """Bull Researcher: 매수 논거 강화"""
+    use_model = model or DECISION_MODEL
     prompt = f"""You are the Bull Researcher. Your job is to construct the strongest possible BULLISH case for {ticker}.
 
 Use the analyst reports below and find the best arguments for buying.
@@ -105,7 +112,7 @@ Provide a concise but compelling bull case (2-3 paragraphs)."""
 
     try:
         message = client.messages.create(
-            model=DECISION_MODEL,
+            model=use_model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -115,8 +122,9 @@ Provide a concise but compelling bull case (2-3 paragraphs)."""
         return f"Bullish case for {ticker}: Positive analyst signals support buying opportunity."
 
 
-def _get_bear_case(client: anthropic.Anthropic, ticker: str, context: str) -> str:
+def _get_bear_case(client: anthropic.Anthropic, ticker: str, context: str, model: str = None) -> str:
     """Bear Researcher: 매도 논거 강화"""
+    use_model = model or DECISION_MODEL
     prompt = f"""You are the Bear Researcher. Your job is to construct the strongest possible BEARISH case for {ticker}.
 
 Use the analyst reports below and find the best arguments for selling or avoiding.
@@ -128,7 +136,7 @@ Provide a concise but compelling bear case (2-3 paragraphs)."""
 
     try:
         message = client.messages.create(
-            model=DECISION_MODEL,
+            model=use_model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -143,7 +151,8 @@ def _get_consensus(
     ticker: str,
     bull_case: str,
     bear_case: str,
-    original_context: str
+    original_context: str,
+    model: str = None
 ) -> dict:
     """Bull/Bear 토론 후 합의 도출"""
     prompt = f"""You are a senior research analyst mediating between Bull and Bear perspectives on {ticker}.
@@ -166,9 +175,10 @@ Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation
     "rationale": "brief explanation of the consensus decision"
 }}"""
 
+    use_model = model or DECISION_MODEL
     try:
         message = client.messages.create(
-            model=DECISION_MODEL,
+            model=use_model,
             max_tokens=512,
             messages=[{"role": "user", "content": prompt}]
         )

@@ -21,7 +21,8 @@ def assess_and_approve(
     trade_decision: TradeDecision,
     research_report: ResearchReport,
     analyst_reports: list[AnalystReport],
-    market_data: Optional[MarketData] = None
+    market_data: Optional[MarketData] = None,
+    config: dict = None
 ) -> TradeDecision:
     """
     리스크 평가 및 Fund Manager 최종 승인
@@ -31,21 +32,27 @@ def assess_and_approve(
         research_report: 리서치 보고서
         analyst_reports: 애널리스트 보고서들
         market_data: 현재 주가 데이터
+        config: 시스템 설정 (선택, 기본값: DEFAULT_CONFIG)
 
     Returns:
         TradeDecision: 승인/수정된 최종 결정 (approved=True/False)
     """
+    from config import get_config
+    cfg = get_config(config)
+    decision_model = cfg.get("decision_llm", DECISION_MODEL)
+    manager_model = cfg.get("deep_think_llm", MANAGER_MODEL)
+
     client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
     context = _build_risk_context(trade_decision, research_report, analyst_reports, market_data)
 
     # 3명의 리스크 분석가 의견
-    risky_opinion = _get_risk_opinion(client, 'risky', context, trade_decision)
-    neutral_opinion = _get_risk_opinion(client, 'neutral', context, trade_decision)
-    safe_opinion = _get_risk_opinion(client, 'safe', context, trade_decision)
+    risky_opinion = _get_risk_opinion(client, 'risky', context, trade_decision, decision_model)
+    neutral_opinion = _get_risk_opinion(client, 'neutral', context, trade_decision, decision_model)
+    safe_opinion = _get_risk_opinion(client, 'safe', context, trade_decision, decision_model)
 
     # Fund Manager 최종 결정
     final_decision = _fund_manager_decision(
-        client, trade_decision, risky_opinion, neutral_opinion, safe_opinion, context
+        client, trade_decision, risky_opinion, neutral_opinion, safe_opinion, context, manager_model
     )
 
     return TradeDecision(
@@ -98,7 +105,8 @@ def _get_risk_opinion(
     client: anthropic.Anthropic,
     analyst_type: str,
     context: str,
-    trade_decision: TradeDecision
+    trade_decision: TradeDecision,
+    model: str = None
 ) -> str:
     """개별 리스크 분석가 의견 수렴"""
     personas = {
@@ -120,9 +128,10 @@ Provide your opinion on:
 
 Keep your response concise (2-3 sentences)."""
 
+    use_model = model or DECISION_MODEL
     try:
         message = client.messages.create(
-            model=DECISION_MODEL,
+            model=use_model,
             max_tokens=512,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -138,7 +147,8 @@ def _fund_manager_decision(
     risky_opinion: str,
     neutral_opinion: str,
     safe_opinion: str,
-    context: str
+    context: str,
+    model: str = None
 ) -> dict:
     """Fund Manager 최종 결정"""
     prompt = f"""You are the Fund Manager making the final investment decision.
@@ -166,16 +176,17 @@ Make your final decision. You can:
 
 Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation before or after.
 {{
-    "action": "buy|sell|hold",
+    "action": "buy|sell|short|cover|hold",
     "quantity": 0.0-1.0,
     "reasoning": "final decision rationale",
     "risk_score": 0.0-1.0,
     "approved": true|false
 }}"""
 
+    use_model = model or MANAGER_MODEL
     try:
         message = client.messages.create(
-            model=MANAGER_MODEL,
+            model=use_model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}]
         )
