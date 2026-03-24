@@ -45,11 +45,11 @@ def analyze_fundamentals(
     cfg = get_config(config)
     model = cfg.get("quick_think_llm", ANALYST_MODEL)
 
-    # 데이터 수집
-    profile = fetch_company_profile(ticker)
-    financials = fetch_basic_financials(ticker)
-    earnings = fetch_earnings(ticker)
-    recommendations = fetch_recommendation_trends(ticker)
+    # 데이터 수집 (date 전달 → look-ahead bias 방지)
+    profile = fetch_company_profile(ticker, date)
+    financials = fetch_basic_financials(ticker, date)
+    earnings = fetch_earnings(ticker, date)
+    recommendations = fetch_recommendation_trends(ticker, date)
 
     # 분석 컨텍스트 구성
     context = _build_analysis_context(
@@ -105,39 +105,49 @@ def _build_analysis_context(
     recommendations: list,
     market_data: Optional[MarketData]
 ) -> str:
-    """분석 컨텍스트 문자열 생성"""
+    """분석 컨텍스트 문자열 생성 (yfinance 기반 필드명)"""
+
+    # P/E 계산: 주가 / TTM EPS
+    pe_ratio = 'N/A'
+    eps_ttm = financials.get('eps_ttm')
+    if market_data and eps_ttm and eps_ttm != 0:
+        pe_ratio = round(market_data.close / eps_ttm, 2)
+
     lines = [
         f"Ticker: {ticker}",
         f"Analysis Date: {date}",
+        f"Data as of Quarter: {financials.get('latest_quarter', 'N/A')}",
         "",
         "=== Company Profile ===",
         f"Name: {profile.get('name', 'N/A')}",
-        f"Industry: {profile.get('finnhubIndustry', 'N/A')}",
-        f"Market Cap: {profile.get('marketCapitalization', 'N/A')}B",
+        f"Sector: {profile.get('sector', 'N/A')}",
+        f"Industry: {profile.get('industry', 'N/A')}",
+        f"Market Cap: ${profile.get('marketCapitalization', 'N/A')}B",
         "",
-        "=== Key Financial Metrics ===",
-        f"P/E Ratio: {financials.get('peBasicExclExtraTTM', 'N/A')}",
-        f"P/B Ratio: {financials.get('pbQuarterly', 'N/A')}",
-        f"ROE: {financials.get('roeTTM', 'N/A')}%",
-        f"Debt/Equity: {financials.get('totalDebt/totalEquityQuarterly', 'N/A')}",
-        f"Revenue Growth YoY: {financials.get('revenueGrowthTTMYoy', 'N/A')}%",
-        f"EPS Growth: {financials.get('epsGrowthTTMYoy', 'N/A')}%",
+        "=== Key Financial Metrics (TTM, look-ahead bias free) ===",
+        f"P/E Ratio (price/EPS_TTM): {pe_ratio}",
+        f"EPS (TTM): {eps_ttm if eps_ttm is not None else 'N/A'}",
+        f"Revenue (TTM): ${round(financials['revenue_ttm']/1e9,2)}B"
+            if financials.get('revenue_ttm') else "Revenue (TTM): N/A",
+        f"Net Income (TTM): ${round(financials['net_income_ttm']/1e9,2)}B"
+            if financials.get('net_income_ttm') else "Net Income (TTM): N/A",
+        f"ROE: {financials.get('roe', 'N/A')}%",
+        f"Debt/Equity: {financials.get('debt_to_equity', 'N/A')}",
+        f"Revenue Growth YoY: {financials.get('revenue_growth_yoy', 'N/A')}%",
         "",
-        "=== Recent Earnings ===",
+        "=== Recent Quarterly EPS ===",
     ]
 
-    for e in earnings[:2]:
+    for e in earnings[:3]:
         lines.append(
-            f"  Q{e.get('period', 'N/A')}: EPS Actual={e.get('actual', 'N/A')}, "
-            f"Estimate={e.get('estimate', 'N/A')}, "
-            f"Surprise={e.get('surprisePercent', 'N/A')}%"
+            f"  {e.get('period', 'N/A')}: EPS={e.get('actual', 'N/A')}"
         )
 
     if market_data:
         lines.extend([
             "",
-            "=== Current Price ===",
-            f"Close: ${market_data.close:.2f}",
+            "=== Market Data ===",
+            f"Price: ${market_data.close:.2f}",
             f"Volume: {market_data.volume:,}",
         ])
 
@@ -146,27 +156,29 @@ def _build_analysis_context(
 
 def _fallback_analysis(financials: dict) -> dict:
     """LLM 실패 시 규칙 기반 폴백 분석"""
-    pe = financials.get('peBasicExclExtraTTM')
-    roe = financials.get('roeTTM')
+    roe = financials.get('roe')
+    de = financials.get('debt_to_equity')
+    rev_growth = financials.get('revenue_growth_yoy')
 
     signal = 'neutral'
     confidence = 0.4
 
-    if pe and roe:
-        if float(pe) < 20 and float(roe) > 15:
+    if roe is not None:
+        if roe > 20 and (de is None or de < 2):
             signal = 'bullish'
-            confidence = 0.65
-        elif float(pe) > 40 or float(roe) < 5:
+            confidence = 0.6
+        elif roe < 5:
             signal = 'bearish'
-            confidence = 0.60
+            confidence = 0.55
 
     return {
         'signal': signal,
         'confidence': confidence,
-        'summary': f'Rule-based analysis: P/E={pe}, ROE={roe}%',
+        'summary': f'Rule-based: ROE={roe}%, D/E={de}, RevGrowth={rev_growth}%',
         'key_points': [
-            f'P/E ratio: {pe}',
             f'ROE: {roe}%',
+            f'Debt/Equity: {de}',
+            f'Revenue Growth YoY: {rev_growth}%',
             'Fallback analysis used'
         ]
     }

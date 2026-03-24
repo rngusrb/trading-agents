@@ -57,6 +57,8 @@
 - ✅ 7. StockTwits API로 Reddit 대체 (tools/social_data.py, API 키 불필요)
 - ✅ 8. Alpha Vantage API 추가 (tools/alpha_vantage.py, .env.example 업데이트)
 - 결과: **35/35 테스트 통과**
+- E2E 검증: `python main.py --mode backtest --ticker AAPL --start 2024-01-02 --end 2024-01-05`
+  - 3 거래일, 총 거래 2회, 전 에이전트 LLM 정상 호출 확인
 
 ## 주의사항
 - pandas-ta Python 3.10 미지원 → ta 라이브러리(0.11.0)로 대체
