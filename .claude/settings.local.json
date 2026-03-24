@@ -31,7 +31,12 @@
       "Bash(cd /Users/guhyeongyu/Desktop/trading-agents && python cli/main.py --ticker AAPL --date 2025-01-15 --report 2>&1)",
       "Bash(cd ~/desktop/trading-agents && python -c \"\nimport yfinance as yf\nt = yf.Ticker\\('AAPL'\\)\ned = t.earnings_dates\nprint\\(type\\(ed\\)\\)\nprint\\(ed\\)\n\" 2>&1 | head -40)",
       "Bash(cd ~/desktop/trading-agents && python -c \"\nfrom tools.fundamentals import get_fundamentals\nresult = get_fundamentals\\('AAPL', '2025-01-15'\\)\nprint\\(result\\)\n\" 2>&1)",
-      "Bash(cd ~/desktop/trading-agents && python -c \"\nimport yfinance as yf, pandas as pd\nt = yf.Ticker\\('AAPL'\\)\nqf = t.quarterly_financials\nprint\\('yfinance가 현재 제공하는 분기:'\\)\nfor col in qf.columns:\n    ts = pd.Timestamp\\(col\\)\n    if ts.tz: ts = ts.tz_localize\\(None\\)\n    print\\(f'  {ts.date\\(\\)}'\\)\nprint\\(\\)\nprint\\('→ 2024-09-30 분기 데이터가 없음 \\(5Q 한계\\)'\\)\n\" 2>&1)"
+      "Bash(cd ~/desktop/trading-agents && python -c \"\nimport yfinance as yf, pandas as pd\nt = yf.Ticker\\('AAPL'\\)\nqf = t.quarterly_financials\nprint\\('yfinance가 현재 제공하는 분기:'\\)\nfor col in qf.columns:\n    ts = pd.Timestamp\\(col\\)\n    if ts.tz: ts = ts.tz_localize\\(None\\)\n    print\\(f'  {ts.date\\(\\)}'\\)\nprint\\(\\)\nprint\\('→ 2024-09-30 분기 데이터가 없음 \\(5Q 한계\\)'\\)\n\" 2>&1)",
+      "Bash(cd ~/desktop/trading-agents && python cli/main.py --ticker AAPL --date 2025-01-15 2>&1)",
+      "Bash(cd ~/desktop/trading-agents && python cli/main.py --ticker AAPL --date 2025-01-15 --report 2>&1)",
+      "Bash(cd ~/desktop/trading-agents && open reports/single_AAPL_20260324_155917.html)",
+      "Bash(cd ~/desktop/trading-agents && python -c \"\nfrom tools.fundamentals import get_fundamentals\nr = get_fundamentals\\('AAPL', '2025-01-15'\\)\nprint\\('결과:', r\\)\nprint\\('revenue_ttm:', r.get\\('revenue_ttm'\\)\\)\nprint\\('Polygon 연결:', 'OK' if r.get\\('revenue_ttm'\\) else 'FAIL'\\)\n\" 2>&1)",
+      "Bash(cd ~/desktop/trading-agents && open reports/single_AAPL_20260324_160748.html)"
     ]
   }
 }

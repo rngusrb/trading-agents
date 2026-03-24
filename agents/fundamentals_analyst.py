@@ -80,8 +80,9 @@ Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation
         response_text = message.content[0].text
         # JSON 파싱
         result = parse_llm_json(response_text)
+        print(f"[FundamentalsAnalyst] ✅ LLM OK — signal={result.get('signal')}, confidence={result.get('confidence')}")
     except Exception as e:
-        print(f"LLM analysis error: {e}")
+        print(f"[FundamentalsAnalyst] ❌ LLM error: {e} — fallback 사용")
         result = _fallback_analysis(financials)
 
     return AnalystReport(
