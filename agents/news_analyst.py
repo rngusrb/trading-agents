@@ -36,7 +36,7 @@ def analyze_news(ticker: str, date: str) -> AnalystReport:
 
 {context}
 
-Respond in JSON format:
+Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation before or after.
 {{
     "signal": "bullish|bearish|neutral",
     "confidence": 0.0-1.0,

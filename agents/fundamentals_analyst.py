@@ -57,7 +57,7 @@ def analyze_fundamentals(
 
 {context}
 
-Respond in JSON format:
+Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation before or after.
 {{
     "signal": "bullish|bearish|neutral",
     "confidence": 0.0-1.0,
@@ -72,10 +72,6 @@ Respond in JSON format:
             messages=[{"role": "user", "content": prompt}]
         )
         response_text = message.content[0].text
-        print(f"\n{'='*60}")
-        print(f"[FundamentalsAnalyst] LLM Raw Response:")
-        print(response_text)
-        print(f"{'='*60}\n")
         # JSON 파싱
         result = parse_llm_json(response_text)
     except Exception as e:

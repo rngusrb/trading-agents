@@ -159,7 +159,7 @@ def _get_consensus(
 
 After weighing both arguments, provide your consensus recommendation.
 
-Respond in JSON format:
+Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation before or after.
 {{
     "consensus": "buy|sell|hold",
     "conviction": 0.0-1.0,

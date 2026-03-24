@@ -54,7 +54,7 @@ Rules:
   - Hold: quantity 0.0
 - risk_score: estimated risk level 0.0 (low risk) to 1.0 (high risk)
 
-Respond in JSON format:
+Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation before or after.
 {{
     "action": "buy|sell|hold",
     "quantity": 0.0-1.0,

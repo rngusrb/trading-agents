@@ -67,5 +67,12 @@ def fetch_historical_data(
     """
     ticker_obj = yf.Ticker(ticker)
     hist = ticker_obj.history(start=start_date, end=end_date)
-    hist.index = pd.to_datetime(hist.index)
+    if not hist.empty:
+        hist.index = pd.to_datetime(hist.index)
+        # yfinance는 tz-aware(UTC) 또는 시각이 포함된 Timestamp를 반환할 수 있음
+        # pd.Timestamp('YYYY-MM-DD')는 자정(00:00:00)이므로
+        # tz 제거 후 normalize()로 시각을 자정으로 통일해야 날짜 비교가 정확함
+        if hist.index.tz is not None:
+            hist.index = hist.index.tz_convert(None)
+        hist.index = hist.index.normalize()
     return hist

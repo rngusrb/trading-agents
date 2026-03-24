@@ -164,7 +164,7 @@ Make your final decision. You can:
 - Change the action (e.g., reduce from buy to hold)
 - Reject the trade entirely
 
-Respond in JSON format:
+Respond with ONLY a raw JSON object. No markdown, no code blocks, no explanation before or after.
 {{
     "action": "buy|sell|hold",
     "quantity": 0.0-1.0,
